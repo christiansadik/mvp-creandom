@@ -1,0 +1,138 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CREATIVE
+  COMPANY
+}
+
+enum PlanType {
+  JUST_ONE_TRY
+  JUST_FEW_DATES
+  JUST_CANT_STOP
+  FREE
+  STUDIO
+}
+
+enum DocumentType {
+  TIMESTAMP
+  NDA
+  CONTRACT
+}
+
+model User {
+  id             String    @id @default(cuid())
+  email          String    @unique
+  passwordHash   String
+  role           UserRole
+  plan           PlanType  @default(JUST_ONE_TRY)
+  phone          String?
+  phoneVerified  Boolean   @default(false)
+  onboardingDone Boolean   @default(false)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  profileCreative ProfileCreative?
+  profileCompany  ProfileCompany?
+  documents       Document[]
+  ndaCreated      NdaAgreement[]   @relation("NdaCreator")
+  ndaReceived     NdaAgreement[]   @relation("NdaRecipient")
+}
+
+model ProfileCreative {
+  id            String    @id @default(cuid())
+  userId        String    @unique
+  fullName      String
+  birthDate     DateTime?
+  birthPlace    String?
+  codiceFiscale String?
+  partitaIva    String?
+  createdAt     DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ProfileCompany {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  ragioneSociale   String
+  formaGiuridica   String?
+  indirizzoSede    String?
+  codiceFiscaleIva String?
+  codiceSDI        String?
+  referenteName    String?
+  referenteEmail   String?
+  referenteCF      String?
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  fileUrl     String
+  fileName    String
+  fileSize    Int
+  mimeType    String
+  sha256Hash  String
+  type        DocumentType @default(TIMESTAMP)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nda  NdaAgreement?
+
+  @@index([userId])
+}
+
+model NdaClause {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+  isDefault   Boolean @default(false)
+
+  agreements NdaAgreementClause[]
+}
+
+model NdaAgreement {
+  id             String    @id @default(cuid())
+  documentId     String?   @unique
+  creatorId      String
+  recipientId    String?
+  recipientEmail String?
+  title          String
+  description    String?
+  duration       String?
+  acceptedAt     DateTime?
+  acceptorIp     String?
+  acceptorAgent  String?
+  status         String    @default("DRAFT")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  document  Document?            @relation(fields: [documentId], references: [id])
+  creator   User                 @relation("NdaCreator", fields: [creatorId], references: [id])
+  recipient User?                @relation("NdaRecipient", fields: [recipientId], references: [id])
+  clauses   NdaAgreementClause[]
+
+  @@index([creatorId])
+}
+
+model NdaAgreementClause {
+  id          String @id @default(cuid())
+  agreementId String
+  clauseId    String
+
+  agreement NdaAgreement @relation(fields: [agreementId], references: [id], onDelete: Cascade)
+  clause    NdaClause    @relation(fields: [clauseId], references: [id])
+
+  @@unique([agreementId, clauseId])
+}
