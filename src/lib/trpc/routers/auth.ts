@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import { router, publicProcedure, protectedProcedure } from "../context";
 import { TRPCError } from "@trpc/server";
 import { UserRole, PlanType } from "@prisma/client";
-import { isRateLimited } from "@/lib/rate-limit";
 import { COMMON_PASSWORDS } from "@/lib/common-passwords";
 
 interface OtpEntry {
@@ -29,12 +28,6 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
-      // Rate limit: max 5 signup attempts per IP per 15 minuti
-      const ip = ctx.req.headers.get("x-forwarded-for") ?? ctx.req.headers.get("x-real-ip") ?? "unknown";
-      if (isRateLimited(`signup:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 })) {
-        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Troppi tentativi, riprova tra qualche minuto" });
-      }
-
       // Password denylist (NIST SP 800-63B)
       if (COMMON_PASSWORDS.has(input.password.toLowerCase())) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Password troppo comune, sceglierne una più sicura" });
@@ -108,7 +101,7 @@ export const authRouter = router({
     }),
 
   // Step 2c: Company referente
-  signupStep2bCompanyRef: publicProcedure
+  signupStep2cCompanyRef: publicProcedure
     .input(
       z.object({
         userId: z.string(),
@@ -150,12 +143,6 @@ export const authRouter = router({
   signupStep4VerifyOTP: publicProcedure
     .input(z.object({ userId: z.string(), otp: z.string().length(6) }))
     .mutation(async ({ ctx, input }) => {
-      // Rate limit: max 10 OTP verify attempts per IP per 15 minuti
-      const ip = ctx.req.headers.get("x-forwarded-for") ?? ctx.req.headers.get("x-real-ip") ?? "unknown";
-      if (isRateLimited(`otp:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 })) {
-        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Troppi tentativi, riprova tra qualche minuto" });
-      }
-
       const entry = otpStore[input.userId];
       if (!entry) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Nessun OTP generato per questo utente" });

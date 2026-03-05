@@ -34,8 +34,8 @@ export function BrandLogo({ className = "text-3xl", withIcon = false, iconSize =
         />
       )}
       <span className={`font-bold tracking-tight ${className}`}>
-        {LETTERS.map(({ char, color }) => (
-          <span key={char} style={{ color }}>
+        {LETTERS.map(({ char, color }, i) => (
+          <span key={i} style={{ color }}>
             {char}
           </span>
         ))}

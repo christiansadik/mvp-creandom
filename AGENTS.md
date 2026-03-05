@@ -4,6 +4,33 @@ Coding agent instructions for this repository.
 
 ---
 
+## MVP Philosophy — MANDATORY
+
+Questo è un MVP destinato a **demo per investitori e partner**, non a utenti reali in produzione.
+
+**Principi obbligatori:**
+
+- **Minimo overengineering.** Consegnare nel minor tempo possibile. Se una soluzione semplice funziona per la demo, usare quella.
+- **Nessun utente reale.** L'MVP non verrà usato come beta pubblica. Non esistono dati utente da proteggere davvero.
+- **Sicurezza come best practice architetturale**, non come requisito operativo. Implementare pattern corretti (es. non esporre `passwordHash`, usare HTTPS, JWT) per mostrare che il progetto sa come si fa — ma senza sistemi complessi di difesa (rate limiting distribuito, WAF, audit log, ecc.).
+- **Posticipare a V2** tutto ciò che non è visibile nella demo: rate limiting distribuito (Upstash/Redis), HMAC token tra step signup, RBAC granulare, payment verification, GDPR compliance operativa.
+- **Prima di implementare una feature di sicurezza o infrastruttura**, chiedersi: *"Questo è visibile o valutabile nella demo?"* Se no, non farlo.
+- **Nessun debito tecnico nascosto.** Se si sceglie una soluzione semplificata, commentarla con `// MVP — migliorare in V2` per segnalare l'intento.
+
+**Filtro decisionale per review esterne (es. Copilot, linting):**
+
+| Categoria suggerimento | Azione |
+|---|---|
+| Bug funzionale visibile nella UI | Implementare subito |
+| Problema di tipo / compilazione | Implementare subito |
+| Sicurezza architetturale base (no password in chiaro, no leak di hash) | Implementare |
+| Rate limiting distribuito, WAF, audit trail completo | Posticipare a V2 |
+| Auth tra step signup (HMAC/JWT temporaneo) | Posticipare a V2 |
+| Payment verification su piano | Posticipare a V2 |
+| Ottimizzazioni bundle / devDeps | Solo se non rallenta lo sviluppo |
+
+---
+
 ## Stack
 
 - **Framework:** Next.js 16 (App Router), React 19

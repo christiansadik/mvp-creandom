@@ -17,7 +17,7 @@ export function StepCompanyReferent({ userId, onSuccess }: Props) {
   const [referenteCF, setReferenteCF] = useState("");
   const [error, setError] = useState("");
 
-  const mutation = trpc.auth.signupStep2bCompanyRef.useMutation({
+  const mutation = trpc.auth.signupStep2cCompanyRef.useMutation({
     onSuccess,
     onError: (e) => setError(e.message),
   });

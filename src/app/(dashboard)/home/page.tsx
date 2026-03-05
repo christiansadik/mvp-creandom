@@ -23,6 +23,12 @@ export default function HomePage() {
 
   const { data: docs, isLoading } = trpc.document.list.useQuery({ filter, sort });
 
+  const filteredDocs = docs?.filter((doc) => {
+    if (tab === "sent") return doc.type === "NDA";
+    if (tab === "unsent") return doc.type !== "NDA";
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-black text-white flex flex-col max-w-md mx-auto">
       {/* Header */}
@@ -52,13 +58,13 @@ export default function HomePage() {
           <div className="flex justify-center py-10">
             <div className="w-6 h-6 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
           </div>
-        ) : !docs?.length ? (
+        ) : !filteredDocs?.length ? (
           <div className="flex flex-col items-center justify-center py-20 text-zinc-500 space-y-2">
             <p>Nessun documento ancora.</p>
             <p className="text-sm">Usa il + per aggiungerne uno.</p>
           </div>
         ) : (
-          docs.map((doc) => <FeedCard key={doc.id} doc={doc} />)
+          filteredDocs.map((doc) => <FeedCard key={doc.id} doc={doc} />)
         )}
       </div>
 

@@ -63,6 +63,9 @@ export const ndaRouter = router({
         where: { id: input.id, recipientId: ctx.session.user.id },
       });
       if (!nda) throw new TRPCError({ code: "NOT_FOUND" });
+      if (nda.status !== NdaStatus.DRAFT && nda.status !== NdaStatus.SENT) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "NDA non accettabile in questo stato" });
+      }
 
       // Web Headers API (.get()) — compatibile con NextRequest (fetch adapter)
       // Preferire x-real-ip (iniettato da Vercel/proxy fidato) su x-forwarded-for
