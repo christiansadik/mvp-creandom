@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { NdaStatus } from "@prisma/client";
 import { router, protectedProcedure } from "../context";
 import { TRPCError } from "@trpc/server";
 
@@ -63,8 +64,10 @@ export const ndaRouter = router({
       });
       if (!nda) throw new TRPCError({ code: "NOT_FOUND" });
 
+      // Preferire x-real-ip (iniettato da Vercel/proxy fidato) su x-forwarded-for
       const ip =
-        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0] ??
+        (ctx.req.headers["x-real-ip"] as string) ??
+        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ??
         ctx.req.socket?.remoteAddress ??
         "unknown";
       const agent = ctx.req.headers["user-agent"] ?? "unknown";
@@ -75,7 +78,7 @@ export const ndaRouter = router({
           acceptedAt: new Date(),
           acceptorIp: ip,
           acceptorAgent: agent,
-          status: "ACCEPTED",
+          status: NdaStatus.ACCEPTED,
         },
       });
     }),

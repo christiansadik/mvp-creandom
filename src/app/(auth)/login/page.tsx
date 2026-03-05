@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,17 +36,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-black px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center space-y-1">
-          <h1
-            className="text-3xl font-bold"
-            style={{
-              background:
-                "linear-gradient(90deg, #f472b6, #a78bfa, #60a5fa, #34d399, #facc15, #fb923c)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            creandom
-          </h1>
+          <h1><BrandLogo /></h1>
           <p className="text-zinc-400 text-sm">Accedi al tuo account</p>
         </div>
 

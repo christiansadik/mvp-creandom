@@ -2,6 +2,8 @@ import { DocumentType } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import type { inferRouterOutputs } from "@trpc/server";
+import type { AppRouter } from "@/lib/trpc/router";
 
 const TYPE_LABELS: Record<DocumentType, string> = {
   TIMESTAMP: "Timestamp",
@@ -9,16 +11,7 @@ const TYPE_LABELS: Record<DocumentType, string> = {
   CONTRACT: "Contratto",
 };
 
-type DocItem = {
-  id: string;
-  title: string;
-  description: string | null;
-  mimeType: string;
-  sha256Hash: string;
-  type: DocumentType;
-  createdAt: Date | string;
-  nda?: unknown;
-};
+type DocItem = inferRouterOutputs<AppRouter>["document"]["list"][number];
 
 const TYPE_COLORS: Record<DocumentType, string> = {
   TIMESTAMP: "bg-blue-500/20 text-blue-400 border-blue-500/30",

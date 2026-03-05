@@ -124,7 +124,10 @@ export const authRouter = router({
   signupStep4VerifyOTP: publicProcedure
     .input(z.object({ userId: z.string(), otp: z.string().length(6) }))
     .mutation(async ({ ctx, input }) => {
-      const expected = otpStore[input.userId] ?? "123456";
+      const expected = otpStore[input.userId];
+      if (!expected) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Nessun OTP generato per questo utente" });
+      }
       if (input.otp !== expected) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Codice OTP non valido" });
       }

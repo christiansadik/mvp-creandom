@@ -3,13 +3,14 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Plus, Filter } from "lucide-react";
+import { Plus } from "lucide-react";
 import { trpc } from "@/lib/trpc/client";
 import { FeedCard } from "@/components/dashboard/FeedCard";
 import { FilterMenu } from "@/components/dashboard/FilterMenu";
 import { DocumentType } from "@prisma/client";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/BrandLogo";
 
 type TabValue = "all" | "sent" | "unsent";
 
@@ -27,16 +28,7 @@ export default function HomePage() {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-black px-4 pt-6 pb-2 space-y-3">
         <div className="flex items-center justify-between">
-          <h1
-            className="text-xl font-bold"
-            style={{
-              background: "linear-gradient(90deg, #f472b6, #a78bfa, #60a5fa, #34d399, #facc15)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            creandom
-          </h1>
+          <h1><BrandLogo className="text-xl" /></h1>
           <div className="flex items-center gap-2">
             <FilterMenu filter={filter} sort={sort} onFilter={setFilter} onSort={setSort} />
             <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-xs font-bold">

@@ -25,6 +25,14 @@ enum DocumentType {
   CONTRACT
 }
 
+// Stato del ciclo di vita di un NdaAgreement
+enum NdaStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+}
+
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
@@ -114,7 +122,7 @@ model NdaAgreement {
   acceptedAt     DateTime?
   acceptorIp     String?
   acceptorAgent  String?
-  status         String    @default("DRAFT")
+  status         NdaStatus @default(DRAFT)
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
@@ -124,6 +132,7 @@ model NdaAgreement {
   clauses   NdaAgreementClause[]
 
   @@index([creatorId])
+  @@index([recipientId])
 }
 
 model NdaAgreementClause {

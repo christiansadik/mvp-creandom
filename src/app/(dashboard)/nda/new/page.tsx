@@ -17,22 +17,16 @@ import { trpc } from "@/lib/trpc/client";
 
 const DURATION_OPTIONS = ["Illimitata", "6 mesi", "1 anno", "2 anni"];
 
-// Static clause templates (seeded in DB in real app)
-const CLAUSE_TEMPLATES = [
-  { id: "clause-1", name: "Divieto di divulgazione", description: "Le parti si impegnano a non divulgare le informazioni riservate a terzi." },
-  { id: "clause-2", name: "Obbligo di riservatezza a terzi", description: "Le informazioni devono essere mantenute riservate anche nei confronti di collaboratori." },
-  { id: "clause-3", name: "Rimedi legali", description: "In caso di violazione si applicano i rimedi previsti dalla legge." },
-  { id: "clause-4", name: "Clausola di non concorrenza", description: "Le parti non potranno operare in settori concorrenti per la durata dell'accordo." },
-];
-
 export default function NdaNewPage() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [duration, setDuration] = useState("Illimitata");
-  const [selectedClauses, setSelectedClauses] = useState<string[]>(["clause-1", "clause-2"]);
+  const [selectedClauses, setSelectedClauses] = useState<string[]>([]);
   const [recipientEmail, setRecipientEmail] = useState("");
   const [error, setError] = useState("");
+
+  const { data: clauses = [], isLoading: clausesLoading } = trpc.nda.getClauses.useQuery();
 
   const createNda = trpc.nda.create.useMutation({
     onSuccess: () => router.push("/home"),
@@ -56,6 +50,9 @@ export default function NdaNewPage() {
       recipientEmail: recipientEmail || undefined,
     });
   }
+
+  const mainClauses = clauses.slice(0, 3);
+  const moreClauses = clauses.slice(3);
 
   return (
     <div className="min-h-screen bg-black text-white max-w-md mx-auto">
@@ -111,44 +108,54 @@ export default function NdaNewPage() {
 
         <div className="space-y-2">
           <Label>Clausole NDA</Label>
-          <div className="rounded-xl border border-zinc-700 bg-zinc-900 divide-y divide-zinc-800">
-            {CLAUSE_TEMPLATES.slice(0, 3).map((clause) => (
-              <div key={clause.id} className="flex items-center gap-3 px-4 py-3">
-                <Checkbox
-                  id={clause.id}
-                  checked={selectedClauses.includes(clause.id)}
-                  onCheckedChange={() => toggleClause(clause.id)}
-                />
-                <Label htmlFor={clause.id} className="text-sm text-white cursor-pointer">
-                  {clause.name}
-                </Label>
-              </div>
-            ))}
-            <Accordion type="single" collapsible>
-              <AccordionItem value="more" className="border-0">
-                <AccordionTrigger className="px-4 py-3 text-sm text-zinc-400 hover:no-underline">
-                  Altre clausole
-                </AccordionTrigger>
-                <AccordionContent className="px-4 pb-3">
-                  {CLAUSE_TEMPLATES.slice(3).map((clause) => (
-                    <div key={clause.id} className="flex items-center gap-3 py-2">
-                      <Checkbox
-                        id={clause.id}
-                        checked={selectedClauses.includes(clause.id)}
-                        onCheckedChange={() => toggleClause(clause.id)}
-                      />
-                      <div>
-                        <Label htmlFor={clause.id} className="text-sm text-white cursor-pointer">
-                          {clause.name}
-                        </Label>
-                        <p className="text-xs text-zinc-500">{clause.description}</p>
-                      </div>
-                    </div>
-                  ))}
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
+          {clausesLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="w-5 h-5 border-2 border-green-400 border-t-transparent rounded-full animate-spin" />
+            </div>
+          ) : (
+            <div className="rounded-xl border border-zinc-700 bg-zinc-900 divide-y divide-zinc-800">
+              {mainClauses.map((clause) => (
+                <div key={clause.id} className="flex items-center gap-3 px-4 py-3">
+                  <Checkbox
+                    id={clause.id}
+                    checked={selectedClauses.includes(clause.id)}
+                    onCheckedChange={() => toggleClause(clause.id)}
+                  />
+                  <Label htmlFor={clause.id} className="text-sm text-white cursor-pointer">
+                    {clause.name}
+                  </Label>
+                </div>
+              ))}
+              {moreClauses.length > 0 && (
+                <Accordion type="single" collapsible>
+                  <AccordionItem value="more" className="border-0">
+                    <AccordionTrigger className="px-4 py-3 text-sm text-zinc-400 hover:no-underline">
+                      Altre clausole
+                    </AccordionTrigger>
+                    <AccordionContent className="px-4 pb-3">
+                      {moreClauses.map((clause) => (
+                        <div key={clause.id} className="flex items-center gap-3 py-2">
+                          <Checkbox
+                            id={clause.id}
+                            checked={selectedClauses.includes(clause.id)}
+                            onCheckedChange={() => toggleClause(clause.id)}
+                          />
+                          <div>
+                            <Label htmlFor={clause.id} className="text-sm text-white cursor-pointer">
+                              {clause.name}
+                            </Label>
+                            {clause.description && (
+                              <p className="text-xs text-zinc-500">{clause.description}</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">

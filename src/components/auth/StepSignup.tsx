@@ -15,7 +15,6 @@ interface Props {
 export function StepSignup({ role, onSuccess }: Props) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
   const [error, setError] = useState("");
 
   const mutation = trpc.auth.signupStep1.useMutation({
@@ -34,17 +33,6 @@ export function StepSignup({ role, onSuccess }: Props) {
       <h2 className="text-xl font-bold text-white">
         {role === "COMPANY" ? "Registra la tua Azienda" : "Crea il tuo account"}
       </h2>
-      {role === "CREATIVE" && (
-        <div className="space-y-2">
-          <Label>Nome completo</Label>
-          <Input
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Mario Rossi"
-            className="bg-zinc-900 border-zinc-700"
-          />
-        </div>
-      )}
       <div className="space-y-2">
         <Label>Email</Label>
         <Input
