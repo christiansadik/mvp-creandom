@@ -19,7 +19,7 @@ function SignupContent() {
   const [step, setStep] = useState(1);
   const [userId, setUserId] = useState<string | null>(null);
 
-  const totalSteps = role === "COMPANY" ? 7 : 6;
+  const totalSteps = role === "COMPANY" ? 6 : 5;
 
   function next() {
     setStep((s) => s + 1);

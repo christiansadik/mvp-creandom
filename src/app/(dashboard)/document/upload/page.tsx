@@ -29,19 +29,19 @@ export default function DocumentUploadPage() {
     onError: (e) => setError(e.message),
   });
 
-  async function handleFile(f: File) {
+  const handleFile = useCallback(async (f: File) => {
     setFile(f);
     setTitle(f.name.replace(/\.[^.]+$/, ""));
     const h = await computeSHA256(f);
     setHash(h);
-  }
+  }, []);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
     const f = e.dataTransfer.files[0];
     if (f) handleFile(f);
-  }, []);
+  }, [handleFile]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

@@ -8,9 +8,9 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: creandom
+      POSTGRES_USER: "${POSTGRES_USER:-postgres}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:-postgres}"
+      POSTGRES_DB: "${POSTGRES_DB:-creandom}"
     ports:
       - "5432:5432"
     volumes:
@@ -30,8 +30,8 @@ services:
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: "postgresql://postgres:postgres@db:5432/creandom?schema=public"
-      DIRECT_URL: "postgresql://postgres:postgres@db:5432/creandom?schema=public"
+      DATABASE_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-creandom}?schema=public"
+      DIRECT_URL: "postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-creandom}?schema=public"
       NEXTAUTH_SECRET: "${NEXTAUTH_SECRET:-creandom-dev-secret-change-in-production}"
       NEXTAUTH_URL: "http://localhost:3000"
       AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID:-}"

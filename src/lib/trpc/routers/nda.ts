@@ -64,13 +64,13 @@ export const ndaRouter = router({
       });
       if (!nda) throw new TRPCError({ code: "NOT_FOUND" });
 
+      // Web Headers API (.get()) — compatibile con NextRequest (fetch adapter)
       // Preferire x-real-ip (iniettato da Vercel/proxy fidato) su x-forwarded-for
       const ip =
-        (ctx.req.headers["x-real-ip"] as string) ??
-        (ctx.req.headers["x-forwarded-for"] as string)?.split(",")[0]?.trim() ??
-        ctx.req.socket?.remoteAddress ??
+        ctx.req.headers.get("x-real-ip") ??
+        ctx.req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
         "unknown";
-      const agent = ctx.req.headers["user-agent"] ?? "unknown";
+      const agent = ctx.req.headers.get("user-agent") ?? "unknown";
 
       return ctx.prisma.ndaAgreement.update({
         where: { id: input.id },

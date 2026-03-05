@@ -1,17 +1,18 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import { type CreateNextContextOptions } from "@trpc/server/adapters/next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ZodError } from "zod";
+import type { NextRequest } from "next/server";
 
-export const createTRPCContext = async (opts: CreateNextContextOptions) => {
-  const session = await getServerSession(opts.req, opts.res, authOptions);
+// Fetch-adapter context — used by App Router route handler
+export const createTRPCContext = async (opts: { req: NextRequest }) => {
+  // getServerSession() without req/res reads cookies via next/headers internally
+  const session = await getServerSession(authOptions);
   return {
     session,
     prisma,
     req: opts.req,
-    res: opts.res,
   };
 };
 

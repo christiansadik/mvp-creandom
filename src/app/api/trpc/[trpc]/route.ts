@@ -8,14 +8,7 @@ const handler = (req: NextRequest) =>
     endpoint: "/api/trpc",
     req,
     router: appRouter,
-    createContext: async () => {
-      return {
-        session: null,
-        prisma: (await import("@/lib/prisma")).prisma,
-        req: req as unknown as Parameters<typeof createTRPCContext>[0]["req"],
-        res: {} as Parameters<typeof createTRPCContext>[0]["res"],
-      };
-    },
+    createContext: () => createTRPCContext({ req }),
   });
 
 export { handler as GET, handler as POST };

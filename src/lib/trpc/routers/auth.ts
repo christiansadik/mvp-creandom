@@ -3,9 +3,20 @@ import bcrypt from "bcryptjs";
 import { router, publicProcedure, protectedProcedure } from "../context";
 import { TRPCError } from "@trpc/server";
 import { UserRole, PlanType } from "@prisma/client";
+import { isRateLimited } from "@/lib/rate-limit";
+import { COMMON_PASSWORDS } from "@/lib/common-passwords";
 
-// In-memory mock OTP store (MVP only)
-const otpStore: Record<string, string> = {};
+interface OtpEntry {
+  code: string;
+  createdAt: Date;
+  attempts: number;
+}
+
+// In-memory OTP store (MVP — sostituire con Redis/DB in produzione)
+const otpStore: Record<string, OtpEntry> = {};
+
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 minuti
+const OTP_MAX_ATTEMPTS = 3;
 
 export const authRouter = router({
   // Step 1: create user with email + password + role
@@ -18,6 +29,17 @@ export const authRouter = router({
       })
     )
     .mutation(async ({ ctx, input }) => {
+      // Rate limit: max 5 signup attempts per IP per 15 minuti
+      const ip = ctx.req.headers.get("x-forwarded-for") ?? ctx.req.headers.get("x-real-ip") ?? "unknown";
+      if (isRateLimited(`signup:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 })) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Troppi tentativi, riprova tra qualche minuto" });
+      }
+
+      // Password denylist (NIST SP 800-63B)
+      if (COMMON_PASSWORDS.has(input.password.toLowerCase())) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Password troppo comune, sceglierne una più sicura" });
+      }
+
       const existing = await ctx.prisma.user.findUnique({ where: { email: input.email } });
       if (existing) throw new TRPCError({ code: "CONFLICT", message: "Email già registrata" });
 
@@ -107,7 +129,7 @@ export const authRouter = router({
       return { ok: true };
     }),
 
-  // Step 3: Save phone and generate mock OTP
+  // Step 3: Save phone and generate OTP
   signupStep3Phone: publicProcedure
     .input(z.object({ userId: z.string(), phone: z.string().min(6) }))
     .mutation(async ({ ctx, input }) => {
@@ -115,8 +137,12 @@ export const authRouter = router({
         where: { id: input.userId },
         data: { phone: input.phone },
       });
-      // Mock OTP
-      otpStore[input.userId] = "123456";
+      // In dev con BYPASS_OTP=true usa codice fisso, altrimenti genera random
+      const code =
+        process.env.BYPASS_OTP === "true"
+          ? "123456"
+          : String(Math.floor(100000 + Math.random() * 900000));
+      otpStore[input.userId] = { code, createdAt: new Date(), attempts: 0 };
       return { ok: true };
     }),
 
@@ -124,11 +150,28 @@ export const authRouter = router({
   signupStep4VerifyOTP: publicProcedure
     .input(z.object({ userId: z.string(), otp: z.string().length(6) }))
     .mutation(async ({ ctx, input }) => {
-      const expected = otpStore[input.userId];
-      if (!expected) {
+      // Rate limit: max 10 OTP verify attempts per IP per 15 minuti
+      const ip = ctx.req.headers.get("x-forwarded-for") ?? ctx.req.headers.get("x-real-ip") ?? "unknown";
+      if (isRateLimited(`otp:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 })) {
+        throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: "Troppi tentativi, riprova tra qualche minuto" });
+      }
+
+      const entry = otpStore[input.userId];
+      if (!entry) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Nessun OTP generato per questo utente" });
       }
-      if (input.otp !== expected) {
+      // Controllo scadenza (5 minuti)
+      if (Date.now() - entry.createdAt.getTime() > OTP_TTL_MS) {
+        delete otpStore[input.userId];
+        throw new TRPCError({ code: "BAD_REQUEST", message: "OTP scaduto, richiedi un nuovo codice" });
+      }
+      // Controllo tentativi massimi
+      if (entry.attempts >= OTP_MAX_ATTEMPTS) {
+        delete otpStore[input.userId];
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Troppi tentativi, richiedi un nuovo OTP" });
+      }
+      if (input.otp !== entry.code) {
+        entry.attempts += 1;
         throw new TRPCError({ code: "BAD_REQUEST", message: "Codice OTP non valido" });
       }
       await ctx.prisma.user.update({
@@ -161,11 +204,23 @@ export const authRouter = router({
       return { ok: true };
     }),
 
-  // Get current user profile
+  // Get current user profile — passwordHash escluso intenzionalmente
   me: protectedProcedure.query(async ({ ctx }) => {
     const user = await ctx.prisma.user.findUnique({
       where: { id: ctx.session.user.id },
-      include: { profileCreative: true, profileCompany: true },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        plan: true,
+        phone: true,
+        phoneVerified: true,
+        onboardingDone: true,
+        createdAt: true,
+        updatedAt: true,
+        profileCreative: true,
+        profileCompany: true,
+      },
     });
     if (!user) throw new TRPCError({ code: "NOT_FOUND" });
     return user;
