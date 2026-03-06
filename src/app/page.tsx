@@ -37,7 +37,7 @@ export default function SplashPage() {
     >
       {/* Motion SVG */}
       <div
-        className="absolute inset-0 transition-opacity duration-400"
+        className="absolute inset-0 transition-opacity duration-[400ms]"
         style={{ opacity: phase === "motion" ? 1 : 0, pointerEvents: "none" }}
       >
         <Image
