@@ -39,16 +39,20 @@ jobs:
       - name: Compute next version
         id: version
         run: |
-          # Get latest tag; default to v0.0.0 if none exists
+          # Get latest tag; empty string if none exists
           LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
-          LATEST=${LATEST:-v0.0.0}
 
-          MAJOR=$(echo $LATEST | cut -d. -f1 | tr -d v)
-          MINOR=$(echo $LATEST | cut -d. -f2)
-          PATCH=$(echo $LATEST | cut -d. -f3)
+          if [ -z "$LATEST" ]; then
+            MAJOR=0; MINOR=0; PATCH=0
+            COMMITS=$(git log --format="%s %b")
+          else
+            MAJOR=$(echo $LATEST | cut -d. -f1 | tr -d v)
+            MINOR=$(echo $LATEST | cut -d. -f2)
+            PATCH=$(echo $LATEST | cut -d. -f3)
+            COMMITS=$(git log ${LATEST}..HEAD --format="%s %b")
+          fi
 
           # Check for BREAKING CHANGE in commit messages since last tag
-          COMMITS=$(git log ${LATEST}..HEAD --format="%s %b")
           if echo "$COMMITS" | grep -qiE "BREAKING[[:space:]]CHANGE|!:"; then
             MAJOR=$((MAJOR + 1))
             MINOR=0
@@ -59,9 +63,9 @@ jobs:
           fi
 
           NEXT="v${MAJOR}.${MINOR}.${PATCH}"
-          echo "previous=$LATEST" >> $GITHUB_OUTPUT
+          echo "previous=${LATEST:-none}" >> $GITHUB_OUTPUT
           echo "next=$NEXT" >> $GITHUB_OUTPUT
-          echo "Next version: $NEXT (was $LATEST)"
+          echo "Next version: $NEXT (was ${LATEST:-none})"
 
       # ── Changelog ───────────────────────────────────────────────────────────
       - name: Generate changelog entry
@@ -72,7 +76,7 @@ jobs:
           DATE=$(date +%Y-%m-%d)
 
           # Collect commits since last tag
-          if [ "$PREVIOUS" = "v0.0.0" ]; then
+          if [ "$PREVIOUS" = "none" ]; then
             COMMITS=$(git log --format="- %s" --no-merges)
           else
             COMMITS=$(git log ${PREVIOUS}..HEAD --format="- %s" --no-merges)
