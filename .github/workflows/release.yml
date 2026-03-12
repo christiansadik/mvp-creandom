@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Fetch secrets from Doppler
-        uses: dopplerhq/secrets-fetch-action@v1
+        uses: dopplerhq/secrets-fetch-action@v1.3.1
         with:
           doppler-token: ${{ secrets.DOPPLER_TOKEN }}
           inject-env-vars: true
