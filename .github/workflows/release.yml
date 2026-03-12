@@ -3,7 +3,7 @@ name: Release (main)
 on:
   push:
     branches:
-      - main
+      - master
 
 jobs:
   release:
@@ -115,7 +115,7 @@ jobs:
           git add CHANGELOG.md
           git commit -m "chore(release): ${{ steps.version.outputs.next }}" --allow-empty
           git tag ${{ steps.version.outputs.next }}
-          git push origin main --follow-tags
+          git push origin master --follow-tags
 
       # ── GitHub Release ───────────────────────────────────────────────────────
       - name: Create GitHub Release
