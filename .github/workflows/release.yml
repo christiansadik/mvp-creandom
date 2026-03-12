@@ -1,0 +1,135 @@
+name: Release (main)
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  release:
+    name: Changelog, GitHub Release, Deploy production
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Fetch secrets from Doppler
+        uses: dopplerhq/secrets-fetch-action@v1.3.1
+        with:
+          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
+          inject-env-vars: true
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      # ── Versioning ──────────────────────────────────────────────────────────
+      - name: Compute next version
+        id: version
+        run: |
+          # Get latest tag; default to v0.0.0 if none exists
+          LATEST=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -1)
+          LATEST=${LATEST:-v0.0.0}
+
+          MAJOR=$(echo $LATEST | cut -d. -f1 | tr -d v)
+          MINOR=$(echo $LATEST | cut -d. -f2)
+          PATCH=$(echo $LATEST | cut -d. -f3)
+
+          # Check for BREAKING CHANGE in commit messages since last tag
+          COMMITS=$(git log ${LATEST}..HEAD --format="%s %b")
+          if echo "$COMMITS" | grep -qiE "BREAKING[[:space:]]CHANGE|!:"; then
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+          else
+            MINOR=$((MINOR + 1))
+            PATCH=0
+          fi
+
+          NEXT="v${MAJOR}.${MINOR}.${PATCH}"
+          echo "previous=$LATEST" >> $GITHUB_OUTPUT
+          echo "next=$NEXT" >> $GITHUB_OUTPUT
+          echo "Next version: $NEXT (was $LATEST)"
+
+      # ── Changelog ───────────────────────────────────────────────────────────
+      - name: Generate changelog entry
+        id: changelog
+        run: |
+          PREVIOUS=${{ steps.version.outputs.previous }}
+          NEXT=${{ steps.version.outputs.next }}
+          DATE=$(date +%Y-%m-%d)
+
+          # Collect commits since last tag
+          if [ "$PREVIOUS" = "v0.0.0" ]; then
+            COMMITS=$(git log --format="- %s" --no-merges)
+          else
+            COMMITS=$(git log ${PREVIOUS}..HEAD --format="- %s" --no-merges)
+          fi
+
+          # Group by prefix
+          FEAT=$(echo "$COMMITS" | grep -E "^- feat" || true)
+          FIX=$(echo "$COMMITS" | grep -E "^- fix" || true)
+          DOCS=$(echo "$COMMITS" | grep -E "^- docs" || true)
+          CHORE=$(echo "$COMMITS" | grep -E "^- chore|^- refactor|^- style|^- perf" || true)
+          OTHER=$(echo "$COMMITS" | grep -vE "^- feat|^- fix|^- docs|^- chore|^- refactor|^- style|^- perf" || true)
+
+          # Build entry
+          ENTRY="## ${NEXT} — ${DATE}"$'\n'
+          [ -n "$FEAT" ]  && ENTRY+=$'\n### Nuove funzionalità\n'"$FEAT"$'\n'
+          [ -n "$FIX" ]   && ENTRY+=$'\n### Fix\n'"$FIX"$'\n'
+          [ -n "$DOCS" ]  && ENTRY+=$'\n### Documentazione\n'"$DOCS"$'\n'
+          [ -n "$CHORE" ] && ENTRY+=$'\n### Manutenzione\n'"$CHORE"$'\n'
+          [ -n "$OTHER" ] && ENTRY+=$'\n### Altro\n'"$OTHER"$'\n'
+
+          # Prepend to CHANGELOG.md
+          if [ -f CHANGELOG.md ]; then
+            echo "$ENTRY" | cat - CHANGELOG.md > /tmp/changelog.tmp && mv /tmp/changelog.tmp CHANGELOG.md
+          else
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "$ENTRY" >> CHANGELOG.md
+          fi
+
+          # Save entry for release body (multiline safe)
+          echo "entry<<EOF" >> $GITHUB_OUTPUT
+          echo "$ENTRY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      # ── Git tag + push changelog ─────────────────────────────────────────────
+      - name: Commit changelog and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add CHANGELOG.md
+          git commit -m "chore(release): ${{ steps.version.outputs.next }}" --allow-empty
+          git tag ${{ steps.version.outputs.next }}
+          git push origin master --follow-tags
+
+      # ── GitHub Release ───────────────────────────────────────────────────────
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.next }}
+          name: ${{ steps.version.outputs.next }}
+          body: ${{ steps.changelog.outputs.entry }}
+          draft: false
+          prerelease: false
+
+      # ── Deploy production ────────────────────────────────────────────────────
+      - name: Deploy to Vercel (production)
+        run: |
+          npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
+          npx vercel build --prod --token=$VERCEL_TOKEN
+          npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
