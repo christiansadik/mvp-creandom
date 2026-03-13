@@ -17,7 +17,7 @@ jobs:
         uses: dopplerhq/cli-action@v3
 
       - name: Load secrets from Doppler
-        run: doppler secrets download --no-file --format env >> $GITHUB_ENV
+        run: doppler secrets download --no-file --format env-no-quotes >> $GITHUB_ENV
         env:
           DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
