@@ -97,29 +97,18 @@ jobs:
           [ -n "$CHORE" ] && ENTRY+=$'\n### Manutenzione\n'"$CHORE"$'\n'
           [ -n "$OTHER" ] && ENTRY+=$'\n### Altro\n'"$OTHER"$'\n'
 
-          # Prepend to CHANGELOG.md
-          if [ -f CHANGELOG.md ]; then
-            echo "$ENTRY" | cat - CHANGELOG.md > /tmp/changelog.tmp && mv /tmp/changelog.tmp CHANGELOG.md
-          else
-            echo "# Changelog" > CHANGELOG.md
-            echo "" >> CHANGELOG.md
-            echo "$ENTRY" >> CHANGELOG.md
-          fi
-
           # Save entry for release body (multiline safe)
           echo "entry<<EOF" >> $GITHUB_OUTPUT
           echo "$ENTRY" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
-      # ── Git tag + push changelog ─────────────────────────────────────────────
-      - name: Commit changelog and tag
+      # ── Git tag ─────────────────────────────────────────────────────────────
+      - name: Tag release
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add CHANGELOG.md
-          git commit -m "chore(release): ${{ steps.version.outputs.next }}" --allow-empty
           git tag ${{ steps.version.outputs.next }}
-          git push origin master --follow-tags
+          git push origin ${{ steps.version.outputs.next }}
 
       # ── GitHub Release ───────────────────────────────────────────────────────
       - name: Create GitHub Release
