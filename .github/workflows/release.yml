@@ -122,16 +122,14 @@ jobs:
           draft: false
           prerelease: false
 
-      # ── Sync env vars to Vercel ────────────────────────────────────────────
+      # ── Sync env vars to Vercel (before any build) ─────────────────────────────
       - name: Sync environment variables to Vercel
         run: |
-          # Extract vars from $GITHUB_ENV and sync to Vercel Production
           cat > /tmp/sync_env.sh << 'EOFSCRIPT'
           #!/bin/bash
           PROJECT_ID="prj_mVO3o0lx6I4DfXQm4IIzqvcc6NBk"
           TOKEN="$VERCEL_TOKEN"
           
-          # Vars to sync to Production
           VARS_TO_SYNC=(
             "DATABASE_URL"
             "NEXTAUTH_SECRET"
@@ -146,11 +144,7 @@ jobs:
           
           for VAR in "${VARS_TO_SYNC[@]}"; do
             VALUE=$(eval "echo \$$VAR")
-            if [ -z "$VALUE" ]; then
-              echo "⚠ Skipping $VAR (empty)"
-              continue
-            fi
-            
+            if [ -z "$VALUE" ]; then continue; fi
             echo "Syncing $VAR to Vercel Production..."
             curl -s -X POST "https://api.vercel.com/v10/projects/$PROJECT_ID/env" \
               -H "Authorization: Bearer $TOKEN" \
@@ -158,7 +152,6 @@ jobs:
               -d "{\"key\":\"$VAR\",\"value\":\"$VALUE\",\"target\":[\"production\"]}" > /dev/null
           done
           EOFSCRIPT
-          
           bash /tmp/sync_env.sh
         env:
           VERCEL_TOKEN: ${{ env.VERCEL_TOKEN }}
