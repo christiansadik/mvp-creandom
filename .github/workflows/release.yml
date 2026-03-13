@@ -122,6 +122,47 @@ jobs:
           draft: false
           prerelease: false
 
+      # ── Sync env vars to Vercel ────────────────────────────────────────────
+      - name: Sync environment variables to Vercel
+        run: |
+          # Extract vars from $GITHUB_ENV and sync to Vercel Production
+          cat > /tmp/sync_env.sh << 'EOFSCRIPT'
+          #!/bin/bash
+          PROJECT_ID="prj_mVO3o0lx6I4DfXQm4IIzqvcc6NBk"
+          TOKEN="$VERCEL_TOKEN"
+          
+          # Vars to sync to Production
+          VARS_TO_SYNC=(
+            "DATABASE_URL"
+            "NEXTAUTH_SECRET"
+            "NEXTAUTH_URL"
+            "AWS_ACCESS_KEY_ID"
+            "AWS_SECRET_ACCESS_KEY"
+            "AWS_REGION"
+            "AWS_S3_BUCKET"
+            "AWS_IAM_USER_NAME"
+            "BYPASS_OTP"
+          )
+          
+          for VAR in "${VARS_TO_SYNC[@]}"; do
+            VALUE=$(eval "echo \$$VAR")
+            if [ -z "$VALUE" ]; then
+              echo "⚠ Skipping $VAR (empty)"
+              continue
+            fi
+            
+            echo "Syncing $VAR to Vercel Production..."
+            curl -s -X POST "https://api.vercel.com/v10/projects/$PROJECT_ID/env" \
+              -H "Authorization: Bearer $TOKEN" \
+              -H "Content-Type: application/json" \
+              -d "{\"key\":\"$VAR\",\"value\":\"$VALUE\",\"target\":[\"production\"]}" > /dev/null
+          done
+          EOFSCRIPT
+          
+          bash /tmp/sync_env.sh
+        env:
+          VERCEL_TOKEN: ${{ env.VERCEL_TOKEN }}
+
       # ── Build + Deploy production ────────────────────────────────────────────
       - name: Build
         run: npm run build
