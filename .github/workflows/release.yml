@@ -23,11 +23,13 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Fetch secrets from Doppler
-        uses: dopplerhq/secrets-fetch-action@v1.3.1
-        with:
-          doppler-token: ${{ secrets.DOPPLER_TOKEN }}
-          inject-env-vars: true
+      - name: Install Doppler CLI
+        uses: dopplerhq/cli-action@v3
+
+      - name: Load secrets from Doppler
+        run: doppler secrets download --no-file --format env >> $GITHUB_ENV
+        env:
+          DOPPLER_TOKEN: ${{ secrets.DOPPLER_TOKEN }}
 
       - name: Install dependencies
         run: npm ci
@@ -120,9 +122,14 @@ jobs:
           draft: false
           prerelease: false
 
-      # ── Deploy production ────────────────────────────────────────────────────
+      # ── Build + Deploy production ────────────────────────────────────────────
+      - name: Build
+        run: npm run build
+
       - name: Deploy to Vercel (production)
-        run: |
-          npx vercel pull --yes --environment=production --token=$VERCEL_TOKEN
-          npx vercel build --prod --token=$VERCEL_TOKEN
-          npx vercel deploy --prebuilt --prod --token=$VERCEL_TOKEN
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ env.VERCEL_TOKEN }}
+          vercel-org-id: ${{ env.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ env.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
