@@ -71,11 +71,20 @@ jobs:
         env:
           VERCEL_TOKEN: ${{ env.VERCEL_TOKEN }}
 
-      - name: Deploy to Vercel (preview)
-        run: |
-          npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-          npx vercel build --token=$VERCEL_TOKEN
-          npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
-        env:
-          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
+       - name: Deploy to Vercel (preview)
+         run: |
+           npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+           npx vercel build --token=$VERCEL_TOKEN
+           npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
+         env:
+           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+           VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
+           DATABASE_URL: ${{ env.DATABASE_URL }}
+           NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
+           NEXTAUTH_URL: ${{ env.NEXTAUTH_URL }}
+           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+           AWS_REGION: ${{ env.AWS_REGION }}
+           AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
+           AWS_IAM_USER_NAME: ${{ env.AWS_IAM_USER_NAME }}
+           BYPASS_OTP: ${{ env.BYPASS_OTP }}
