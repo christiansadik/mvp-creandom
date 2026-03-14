@@ -35,56 +35,20 @@ jobs:
       - name: Run DB migrations
         run: npx prisma migrate deploy
 
-      - name: Build
-        run: npm run build
-
-      - name: Sync environment variables to Vercel
+      - name: Deploy to Vercel (preview)
         run: |
-          cat > /tmp/sync_env.sh << 'EOFSCRIPT'
-          #!/bin/bash
-          PROJECT_ID="prj_mVO3o0lx6I4DfXQm4IIzqvcc6NBk"
-          TOKEN="$VERCEL_TOKEN"
-          
-          VARS_TO_SYNC=(
-            "DATABASE_URL"
-            "NEXTAUTH_SECRET"
-            "NEXTAUTH_URL"
-            "AWS_ACCESS_KEY_ID"
-            "AWS_SECRET_ACCESS_KEY"
-            "AWS_REGION"
-            "AWS_S3_BUCKET"
-            "AWS_IAM_USER_NAME"
-            "BYPASS_OTP"
-          )
-          
-          for VAR in "${VARS_TO_SYNC[@]}"; do
-            VALUE=$(eval "echo \$$VAR")
-            if [ -z "$VALUE" ]; then continue; fi
-            echo "Syncing $VAR to Vercel Preview..."
-            curl -s -X POST "https://api.vercel.com/v10/projects/$PROJECT_ID/env" \
-              -H "Authorization: Bearer $TOKEN" \
-              -H "Content-Type: application/json" \
-              -d "{\"key\":\"$VAR\",\"value\":\"$VALUE\",\"target\":[\"preview\"]}" > /dev/null
-          done
-          EOFSCRIPT
-          bash /tmp/sync_env.sh
+          npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
+          npx vercel build --token=$VERCEL_TOKEN
+          npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
         env:
-          VERCEL_TOKEN: ${{ env.VERCEL_TOKEN }}
-
-       - name: Deploy to Vercel (preview)
-         run: |
-           npx vercel pull --yes --environment=preview --token=$VERCEL_TOKEN
-           npx vercel build --token=$VERCEL_TOKEN
-           npx vercel deploy --prebuilt --token=$VERCEL_TOKEN
-         env:
-           VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
-           VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
-           DATABASE_URL: ${{ env.DATABASE_URL }}
-           NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
-           NEXTAUTH_URL: ${{ env.NEXTAUTH_URL }}
-           AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
-           AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
-           AWS_REGION: ${{ env.AWS_REGION }}
-           AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
-           AWS_IAM_USER_NAME: ${{ env.AWS_IAM_USER_NAME }}
-           BYPASS_OTP: ${{ env.BYPASS_OTP }}
+          VERCEL_ORG_ID: ${{ env.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ env.VERCEL_PROJECT_ID }}
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
+          NEXTAUTH_URL: ${{ env.NEXTAUTH_URL }}
+          AWS_ACCESS_KEY_ID: ${{ env.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ env.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ env.AWS_REGION }}
+          AWS_S3_BUCKET: ${{ env.AWS_S3_BUCKET }}
+          AWS_IAM_USER_NAME: ${{ env.AWS_IAM_USER_NAME }}
+          BYPASS_OTP: ${{ env.BYPASS_OTP }}
